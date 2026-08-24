@@ -9,6 +9,8 @@
 .app{display:none;min-height:100vh}.side{position:fixed;left:0;top:0;bottom:0;width:235px;background:#123b30;color:#fff;padding:24px}.side h2{margin:0 0 28px}.side a{display:block;color:#dcebe6;text-decoration:none;padding:13px 0;font-weight:700}
 .main{margin-left:235px;padding:30px;max-width:1250px}.top{display:flex;justify-content:space-between;align-items:center}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin:20px 0}.stat{padding:20px}.stat b{display:block;font-size:28px;color:#187a5a;margin-top:5px}.panel{padding:20px;margin-top:20px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}.hide{display:none}.tablewrap{overflow:auto}.products{width:100%;border-collapse:collapse}.products th,.products td{padding:12px;border-bottom:1px solid #edf1ef;text-align:left}.products img{width:60px;height:45px;object-fit:cover;border-radius:8px}.actions{display:flex;gap:6px}.actions button{border:0;border-radius:8px;padding:7px 10px;cursor:pointer}
 @media(max-width:700px){.side{position:static;width:auto}.main{margin-left:0;padding:18px}.stats{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}}
+.badge{display:inline-block;padding:4px 9px;border-radius:99px;font-size:11px;font-weight:800}.badge.pending{background:#fdf1e0;color:#a86a10}.badge.confirmed{background:#e5f6ee;color:#187a5a}
+.deliverrow{display:flex;gap:6px}.deliverrow input{width:130px;padding:7px 9px;border:1px solid #dce6e2;border-radius:8px}.deliverrow button{border:0;border-radius:8px;padding:7px 10px;background:#187a5a;color:#fff;cursor:pointer;font-weight:700}
 </style></head><body>
 <section class="login" id="login"><div class="box"><h1>Pro Tools Hub Admin</h1><p class="muted">Private control panel</p>
 <div class="field"><label>Email</label><input id="email" type="email"></div>
@@ -24,7 +26,7 @@
 <div class="field full"><label>Description</label><textarea id="description" rows="4"></textarea></div></div>
 <button class="btn" id="saveBtn">Save Product</button> <button class="btn danger" id="cancelBtn">Cancel</button></div>
 <div class="panel" id="products"><h2>Products</h2><div class="tablewrap"><table class="products"><thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead><tbody id="list"></tbody></table></div></div>
-<div class="panel" id="orders"><h2>Orders</h2><p class="muted">Connect your payment/order workflow to the <b>orders</b> collection when you are ready.</p></div>
+<div class="panel" id="orders"><h2>Orders</h2><div class="tablewrap"><table class="products"><thead><tr><th>Buyer</th><th>Product</th><th>Method</th><th>Trx ID</th><th>Status</th><th>Deliver</th></tr></thead><tbody id="orderList"></tbody></table></div></div>
 </main></section>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
@@ -37,7 +39,12 @@ const $=id=>document.getElementById(id);
 $("loginBtn").onclick=async()=>{try{await signInWithEmailAndPassword(auth,$("email").value,$("password").value);$("msg").textContent=""}catch(e){$("msg").textContent="Login failed. Check email/password."}};
 $("logout").onclick=e=>{e.preventDefault();signOut(auth)};
 onAuthStateChanged(auth,u=>{if(u){$("login").style.display="none";$("app").style.display="block";load()}else{$("login").style.display="grid";$("app").style.display="none"}});
-async function load(){let s=await getDocs(collection(db,"products"));$("count").textContent=s.size;$("list").innerHTML=s.docs.map(d=>{let p=d.data();return `<tr><td><img src="${p.image||''}"></td><td>${escapeHtml(p.name||'')}</td><td>${escapeHtml(p.category||'')}</td><td>৳${Number(p.price||0).toFixed(2)}</td><td class="actions"><button onclick="editProduct('${d.id}')">Edit</button><button class="danger" onclick="removeProduct('${d.id}')">Delete</button></td></tr>`}).join("")}
+async function load(){let s=await getDocs(collection(db,"products"));$("count").textContent=s.size;$("list").innerHTML=s.docs.map(d=>{let p=d.data();return `<tr><td><img src="${p.image||''}"></td><td>${escapeHtml(p.name||'')}</td><td>${escapeHtml(p.category||'')}</td><td>৳${Number(p.price||0).toFixed(2)}</td><td class="actions"><button onclick="editProduct('${d.id}')">Edit</button><button class="danger" onclick="removeProduct('${d.id}')">Delete</button></td></tr>`}).join("");loadOrders()}
+async function loadOrders(){let s=await getDocs(collection(db,"orders"));$("orderCount").textContent=s.size;
+let rows=s.docs.map(d=>d).sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0));
+$("orderList").innerHTML=rows.map(d=>{let o=d.data();let confirmed=o.status==='confirmed';
+return `<tr><td>${escapeHtml(o.buyerEmail||'')}</td><td>${escapeHtml(o.productName||'')}<br><span class="muted">৳${Number(o.price||0).toFixed(2)}</span></td><td>${escapeHtml(o.paymentMethod||'')}</td><td>${escapeHtml(o.transactionId||'')}</td><td><span class="badge ${confirmed?'confirmed':'pending'}">${confirmed?'Confirmed':'Pending'}</span></td><td>${confirmed?`<span class="muted">Delivered</span>`:`<div class="deliverrow"><input id="link-${d.id}" placeholder="Download link" value="${escapeHtml(o.deliveryLink||'')}"><button onclick="confirmOrder('${d.id}')">Confirm</button></div>`}</td></tr>`}).join("")||`<tr><td colspan="6" class="muted">No orders yet.</td></tr>`}
+window.confirmOrder=async id=>{let link=$("link-"+id).value.trim();if(!link)return alert("Please paste a download link/license key before confirming.");await updateDoc(doc(db,"orders",id),{status:"confirmed",deliveryLink:link,confirmedAt:serverTimestamp()});loadOrders()};
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 $("addBtn").onclick=()=>{editId=null;$("formTitle").textContent="Add Product";["name","category","price","oldPrice","image","buyUrl","description"].forEach(x=>$(x).value="");$("form").classList.remove("hide")};
 $("cancelBtn").onclick=()=>$("form").classList.add("hide");
