@@ -18,7 +18,7 @@
 <div class="field"><label>Email</label><input id="email" type="email"></div>
 <div class="field"><label>Password</label><input id="password" type="password"></div>
 <button class="btn" id="loginBtn">Login</button><p id="msg" class="muted"></p></div></section>
-<section class="app" id="app"><aside class="side"><h2>Pro Tools Hub</h2><a href="#dashboard">Dashboard</a><a href="#products">Products</a><a href="#orders">Orders</a><a href="#flashsale">Flash Sale</a><a href="#" id="logout">Logout</a></aside>
+<section class="app" id="app"><aside class="side"><h2>Pro Tools Hub</h2><a href="#dashboard">Dashboard</a><a href="#products">Products</a><a href="#orders">Orders</a><a href="#flashsale">Flash Sale</a><a href="#dealoftheday">Deal of the Day</a><a href="#" id="logout">Logout</a></aside>
 <main class="main"><div class="top"><div><h1>Dashboard</h1><p class="muted">Products added here appear on the Blogger store.</p></div><button class="btn" id="addBtn">+ Add Product</button></div>
 <div class="stats"><div class="stat">Products<b id="count">0</b></div><div class="stat">Orders<b id="orderCount">0</b></div><div class="stat">Today's Visitors<b id="visitCount">0</b></div><div class="stat">Status<b>LIVE</b></div></div>
 <div class="panel hide" id="form"><h2 id="formTitle">Add Product</h2><div class="formgrid">
@@ -28,16 +28,20 @@
 <div class="field"></div>
 <div class="field full"><label>Main Image (Cover) — paste image link (e.g. from imgbb.com)</label><input id="image" type="url" placeholder="https://..." oninput="renderMainPreview()"><div id="imagePreview" style="margin-top:8px"></div></div>
 <div class="field full"><label>Additional Images (gallery — one link per line)</label><textarea id="images" rows="3" placeholder="https://...&#10;https://..." oninput="renderGalleryPreview()"></textarea><div id="imagesPreview" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"></div></div>
-<div class="field full"><label>Buy / Checkout URL</label><input id="buyUrl"></div>
 <div class="field full"><label>Description</label><textarea id="description" rows="4"></textarea></div></div>
 <button class="btn" id="saveBtn">Save Product</button> <button class="btn danger" id="cancelBtn">Cancel</button></div>
 <div class="panel" id="products"><h2>Products</h2><div class="tablewrap"><table class="products"><thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead><tbody id="list"></tbody></table></div></div>
 <div class="panel" id="orders"><h2>Orders</h2><div class="tablewrap"><table class="products"><thead><tr><th>Buyer</th><th>Product</th><th>Method</th><th>Trx ID</th><th>Status</th><th>Deliver</th></tr></thead><tbody id="orderList"></tbody></table></div></div>
-<div class="panel" id="flashsalePanel"><h2>Flash Sale Banner</h2>
+<div class="panel" id="flashsale"><h2>Flash Sale Banner</h2>
 <div class="field"><label><input id="flashEnabled" type="checkbox" style="width:auto;display:inline-block;margin-right:8px">Show flash sale banner on store</label></div>
 <div class="field"><label>Banner Text</label><input id="flashText" placeholder="Eid Offer ends soon — up to 30% off!"></div>
 <div class="field"><label>Ends At</label><input id="flashEnd" type="datetime-local"></div>
 <button class="btn" id="saveFlashBtn">Save Flash Sale</button> <span id="flashMsg" class="muted"></span>
+</div>
+<div class="panel" id="dealoftheday"><h2>Deal of the Day</h2>
+<div class="field"><label>Select Product</label><select id="dealProduct"><option value="">— None (hide section) —</option></select></div>
+<div class="field"><label>Ends At (optional countdown)</label><input id="dealEnd" type="datetime-local"></div>
+<button class="btn" id="saveDealBtn">Save Deal of the Day</button> <span id="dealMsg" class="muted"></span>
 </div>
 </main></section>
 <script type="module">
@@ -50,7 +54,7 @@ let editId=null;
 const $=id=>document.getElementById(id);
 $("loginBtn").onclick=async()=>{try{await signInWithEmailAndPassword(auth,$("email").value,$("password").value);$("msg").textContent=""}catch(e){$("msg").textContent="Login failed. Check email/password."}};
 $("logout").onclick=e=>{e.preventDefault();signOut(auth)};
-onAuthStateChanged(auth,u=>{if(u){$("login").style.display="none";$("app").style.display="block";load();loadFlashSale()}else{$("login").style.display="grid";$("app").style.display="none"}});
+onAuthStateChanged(auth,u=>{if(u){$("login").style.display="none";$("app").style.display="block";load();loadFlashSale();loadDealOfDay()}else{$("login").style.display="grid";$("app").style.display="none"}});
 async function load(){let s=await getDocs(collection(db,"products"));$("count").textContent=s.size;$("list").innerHTML=s.docs.map(d=>{let p=d.data();return `<tr><td><img src="${p.image||''}"></td><td>${escapeHtml(p.name||'')}</td><td>${escapeHtml(p.category||'')}</td><td>৳${Number(p.price||0).toFixed(2)}</td><td class="actions"><button onclick="editProduct('${d.id}')">Edit</button><button class="danger" onclick="removeProduct('${d.id}')">Delete</button></td></tr>`}).join("");loadOrders();loadVisits()}
 async function loadVisits(){try{let today=new Date().toISOString().slice(0,10);let d=await getDoc(doc(db,"visits",today));$("visitCount").textContent=d.exists()?(d.data().count||0):0}catch(e){$("visitCount").textContent="0"}}
 async function loadOrders(){let s=await getDocs(collection(db,"orders"));$("orderCount").textContent=s.size;
@@ -61,21 +65,31 @@ window.confirmOrder=async id=>{let link=$("link-"+id).value.trim();if(!link)retu
 window.renderMainPreview=function(){let u=$("image").value.trim();$("imagePreview").innerHTML=u?`<div class="thumb"><img src="${u}"></div>`:""}
 window.renderGalleryPreview=function(){let urls=$("images").value.split("\n").map(x=>x.trim()).filter(Boolean);$("imagesPreview").innerHTML=urls.map(u=>`<div class="thumb"><img src="${u}"></div>`).join("")}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-$("addBtn").onclick=()=>{editId=null;$("formTitle").textContent="Add Product";["name","category","price","oldPrice","image","images","buyUrl","description"].forEach(x=>$(x).value="");$("badge").value="None";renderMainPreview();renderGalleryPreview();$("form").classList.remove("hide")};
+$("addBtn").onclick=()=>{editId=null;$("formTitle").textContent="Add Product";["name","category","price","oldPrice","image","images","description"].forEach(x=>$(x).value="");$("badge").value="None";renderMainPreview();renderGalleryPreview();$("form").classList.remove("hide")};
 $("cancelBtn").onclick=()=>$("form").classList.add("hide");
 $("saveBtn").onclick=async()=>{
   let imgLines=$("images").value.split("\n").map(x=>x.trim()).filter(Boolean);
-  let p={name:$("name").value.trim(),category:$("category").value.trim(),price:Number($("price").value||0),oldPrice:Number($("oldPrice").value||0),badge:$("badge").value,image:$("image").value.trim(),images:imgLines,buyUrl:$("buyUrl").value.trim(),description:$("description").value.trim(),updatedAt:serverTimestamp()};
+  let p={name:$("name").value.trim(),category:$("category").value.trim(),price:Number($("price").value||0),oldPrice:Number($("oldPrice").value||0),badge:$("badge").value,image:$("image").value.trim(),images:imgLines,description:$("description").value.trim(),updatedAt:serverTimestamp()};
   if(!p.name)return alert("Product name required");
   if(editId)await updateDoc(doc(db,"products",editId),p);else await addDoc(collection(db,"products"),{...p,createdAt:serverTimestamp()});
   $("form").classList.add("hide");load();
 };
-window.editProduct=async id=>{let s=await getDocs(collection(db,"products"));let d=s.docs.find(x=>x.id===id);if(!d)return;let p=d.data();editId=id;$("formTitle").textContent="Edit Product";["name","category","price","oldPrice","image","buyUrl","description"].forEach(x=>$(x).value=p[x]??"");$("badge").value=p.badge||"None";$("images").value=Array.isArray(p.images)?p.images.join("\n"):"";renderMainPreview();renderGalleryPreview();$("form").classList.remove("hide")};
+window.editProduct=async id=>{let s=await getDocs(collection(db,"products"));let d=s.docs.find(x=>x.id===id);if(!d)return;let p=d.data();editId=id;$("formTitle").textContent="Edit Product";["name","category","price","oldPrice","image","description"].forEach(x=>$(x).value=p[x]??"");$("badge").value=p.badge||"None";$("images").value=Array.isArray(p.images)?p.images.join("\n"):"";renderMainPreview();renderGalleryPreview();$("form").classList.remove("hide")};
 window.removeProduct=async id=>{if(confirm("Delete this product?")){await deleteDoc(doc(db,"products",id));load()}};
 async function loadFlashSale(){try{let d=await getDoc(doc(db,"settings","flashsale"));if(d.exists()){let s=d.data();$("flashEnabled").checked=!!s.enabled;$("flashText").value=s.text||"";$("flashEnd").value=s.endTime?s.endTime.slice(0,16):""}}catch(e){}}
 $("saveFlashBtn").onclick=async()=>{
   let endVal=$("flashEnd").value;
   await setDoc(doc(db,"settings","flashsale"),{enabled:$("flashEnabled").checked,text:$("flashText").value.trim(),endTime:endVal?new Date(endVal).toISOString():"",updatedAt:serverTimestamp()});
   $("flashMsg").textContent="Saved!";setTimeout(()=>$("flashMsg").textContent="",2000);
+};
+async function populateDealDropdown(selectedId){
+  let s=await getDocs(collection(db,"products"));
+  $("dealProduct").innerHTML='<option value="">— None (hide section) —</option>'+s.docs.map(d=>`<option value="${d.id}" ${d.id===selectedId?"selected":""}>${escapeHtml(d.data().name||"")}</option>`).join("");
+}
+async function loadDealOfDay(){try{let d=await getDoc(doc(db,"settings","dealofday"));let pid=d.exists()?d.data().productId||"":"";await populateDealDropdown(pid);if(d.exists()&&d.data().endTime)$("dealEnd").value=d.data().endTime.slice(0,16)}catch(e){await populateDealDropdown("")}}
+$("saveDealBtn").onclick=async()=>{
+  let endVal=$("dealEnd").value;
+  await setDoc(doc(db,"settings","dealofday"),{productId:$("dealProduct").value,endTime:endVal?new Date(endVal).toISOString():"",updatedAt:serverTimestamp()});
+  $("dealMsg").textContent="Saved!";setTimeout(()=>$("dealMsg").textContent="",2000);
 };
 </script></body></html>
