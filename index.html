@@ -1,27 +1,109 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pro Tools Hub Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f5f8f7;color:#13201c;font:14px system-ui,sans-serif}
-.login{min-height:100vh;display:grid;place-items:center;padding:20px}.box,.panel,.stat{background:#fff;border:1px solid #e3ebe7;border-radius:20px;box-shadow:0 12px 35px #143b2d0b}
-.box{width:min(430px,100%);padding:30px}.box h1{color:#187a5a}.field{margin:12px 0}.field label{display:block;font-weight:800;margin-bottom:6px}.field input,.field textarea{width:100%;padding:13px;border:1px solid #dce6e2;border-radius:11px}
-.btn{border:0;border-radius:11px;padding:12px 17px;background:#187a5a;color:#fff;font-weight:800;cursor:pointer}.danger{background:#d44343}.muted{color:#718096}
-.app{display:none;min-height:100vh}.side{position:fixed;left:0;top:0;bottom:0;width:235px;background:#123b30;color:#fff;padding:24px}.side h2{margin:0 0 28px}.side a{display:block;color:#dcebe6;text-decoration:none;padding:13px 0;font-weight:700}
-.main{margin-left:235px;padding:30px;max-width:1250px}.top{display:flex;justify-content:space-between;align-items:center}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:20px 0}.stat{padding:20px}.stat b{display:block;font-size:28px;color:#187a5a;margin-top:5px}.panel{padding:20px;margin-top:20px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}.hide{display:none}.tablewrap{overflow:auto}.products{width:100%;border-collapse:collapse}.products th,.products td{padding:12px;border-bottom:1px solid #edf1ef;text-align:left}.products img{width:60px;height:45px;object-fit:cover;border-radius:8px}.actions{display:flex;gap:6px}.actions button{border:0;border-radius:8px;padding:7px 10px;cursor:pointer}
-@media(max-width:700px){.side{position:static;width:auto}.main{margin-left:0;padding:18px}.stats{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}}
-.badge{display:inline-block;padding:4px 9px;border-radius:99px;font-size:11px;font-weight:800}.badge.pending{background:#fdf1e0;color:#a86a10}.badge.confirmed{background:#e5f6ee;color:#187a5a}
-.deliverrow{display:flex;gap:6px}.deliverrow input{width:130px;padding:7px 9px;border:1px solid #dce6e2;border-radius:8px}.deliverrow button{border:0;border-radius:8px;padding:7px 10px;background:#187a5a;color:#fff;cursor:pointer;font-weight:700}
-.thumb{position:relative;width:64px;height:64px;border-radius:10px;overflow:hidden;border:1px solid #dce6e2}.thumb img{width:100%;height:100%;object-fit:cover}.thumb button{position:absolute;top:2px;right:2px;border:0;background:#d44343;color:#fff;width:18px;height:18px;border-radius:50%;font-size:11px;cursor:pointer;line-height:1;padding:0}
+:root{--g:#187a5a;--g2:#23956f;--ink:#0f1e19;--muted:#6b7d76;--line:#e6ece9;--bg:#f4f8f6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px 'DM Sans',system-ui,sans-serif}
+h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif}
+.login{min-height:100vh;display:grid;place-items:center;padding:20px;position:relative;overflow:hidden;background:linear-gradient(135deg,#0e2b21,#154536 55%,#0e2b21)}
+.login .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5}
+.login .b1{width:420px;height:420px;top:-160px;right:-120px;background:#23956f}
+.login .b2{width:340px;height:340px;bottom:-180px;left:-100px;background:#187a5a}
+.box{position:relative;z-index:1;width:min(430px,100%);padding:38px 32px;background:rgba(255,255,255,.97);border-radius:24px;box-shadow:0 25px 60px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.4)}
+.box .logo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--g),var(--g2));display:flex;align-items:center;justify-content:center;color:#fff;font:900 22px 'Plus Jakarta Sans';margin-bottom:16px}
+.box h1{color:var(--ink);font-size:24px;margin:0 0 4px}
+.field{margin:14px 0}.field label{display:block;font-weight:700;margin-bottom:6px;font-size:13px;color:#3c4a45}
+.field input,.field textarea,.field select{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit;font-size:14px;background:#fff;transition:border-color .15s}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--g)}
+.btn{border:0;border-radius:12px;padding:12px 18px;background:linear-gradient(135deg,var(--g),var(--g2));color:#fff;font-weight:800;cursor:pointer;font-family:inherit;font-size:14px;box-shadow:0 6px 16px rgba(24,122,90,.25);transition:transform .15s}
+.btn:hover{transform:translateY(-1px)}
+.danger{background:linear-gradient(135deg,#d44343,#b3261e);box-shadow:0 6px 16px rgba(212,67,67,.25)}
+.muted{color:var(--muted)}
+
+.app{display:none;min-height:100vh}
+.side{position:fixed;left:0;top:0;bottom:0;width:245px;background:linear-gradient(180deg,#0e2b21,#123b30);color:#fff;padding:26px 18px;display:flex;flex-direction:column}
+.side .brandrow{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:0 6px}
+.side .brandrow .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--g2),#6fe3b4);display:flex;align-items:center;justify-content:center;font:900 16px 'Plus Jakarta Sans';color:#0e2b21;flex-shrink:0}
+.side h2{margin:0;font-size:17px;color:#fff}
+.side .tagline{color:#9fc7b7;font-size:11.5px;margin:0 0 26px 46px}
+.side a{display:flex;align-items:center;gap:11px;color:#cfe6db;text-decoration:none;padding:12px 12px;font-weight:700;border-radius:12px;margin-bottom:3px;font-size:13.5px;transition:background .15s,color .15s}
+.side a i{width:18px;text-align:center;font-size:14px;opacity:.85}
+.side a:hover{background:rgba(255,255,255,.08);color:#fff}
+.side a.active{background:linear-gradient(135deg,var(--g),var(--g2));color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.side .spacer{flex:1}
+.side .logoutlink{border-top:1px solid rgba(255,255,255,.12);margin-top:10px;padding-top:14px}
+
+.main{margin-left:245px;padding:32px 34px;max-width:1300px}
+.top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;margin-bottom:6px}
+.top h1{margin:0;font-size:26px}
+.top p.muted{margin:4px 0 0}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:22px 0}
+.stat{padding:22px;border-radius:20px;position:relative;overflow:hidden;color:#fff;box-shadow:0 14px 30px rgba(0,0,0,.1)}
+.stat i{font-size:20px;opacity:.9;margin-bottom:10px;display:block}
+.stat b{display:block;font:900 30px 'Plus Jakarta Sans';margin-top:4px}
+.stat span.lbl{font-size:12.5px;opacity:.92;font-weight:700}
+.stat.c1{background:linear-gradient(135deg,#187a5a,#23956f)}
+.stat.c2{background:linear-gradient(135deg,#2b6fd1,#4a9bf0)}
+.stat.c3{background:linear-gradient(135deg,#c2691a,#e8973b)}
+.stat.c4{background:linear-gradient(135deg,#7a3fc2,#a468e8)}
+
+.panel{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 28px rgba(20,59,45,.05);padding:24px;margin-top:22px}
+.panel h2{display:flex;align-items:center;gap:10px;font-size:18px;margin:0 0 18px}
+.panel h2 i{width:34px;height:34px;border-radius:10px;background:#eaf7f2;color:var(--g);display:flex;align-items:center;justify-content:center;font-size:14px}
+
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.full{grid-column:1/-1}.hide{display:none}
+.tablewrap{overflow:auto}
+.products{width:100%;border-collapse:collapse}
+.products th{padding:12px 14px;text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--line)}
+.products td{padding:14px;border-bottom:1px solid #f0f4f2;text-align:left;vertical-align:middle}
+.products tr:hover td{background:#fafcfb}
+.products img{width:56px;height:44px;object-fit:cover;border-radius:9px;border:1px solid var(--line)}
+.actions{display:flex;gap:6px}
+.actions button{border:0;border-radius:9px;padding:8px 12px;cursor:pointer;font-weight:700;font-family:inherit;font-size:12.5px;background:#eef2f0;color:#2e4a41}
+.actions button.danger{background:#fdeceb;color:#b3261e}
+
+@media(max-width:800px){.side{position:static;width:auto;flex-direction:row;flex-wrap:wrap;padding:16px}.side .tagline{display:none}.side .spacer{display:none}.main{margin-left:0;padding:18px}.stats{grid-template-columns:1fr 1fr}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}}
+
+.badge{display:inline-block;padding:5px 11px;border-radius:99px;font-size:11px;font-weight:800}
+.badge.pending{background:#fdf1e0;color:#a86a10}.badge.confirmed{background:#e5f6ee;color:#187a5a}
+
+.deliverrow{display:flex;gap:6px}.deliverrow input{width:150px;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit}
+.deliverrow button{border:0;border-radius:10px;padding:9px 13px;background:linear-gradient(135deg,var(--g),var(--g2));color:#fff;cursor:pointer;font-weight:700;font-family:inherit}
+
+.thumb{position:relative;width:64px;height:64px;border-radius:12px;overflow:hidden;border:1.5px solid var(--line)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb button{position:absolute;top:2px;right:2px;border:0;background:#d44343;color:#fff;width:18px;height:18px;border-radius:50%;font-size:11px;cursor:pointer;line-height:1;padding:0}
 .uploading{color:#a86a10;font-weight:700;font-size:13px}
 </style></head><body>
-<section class="login" id="login"><div class="box"><h1>Pro Tools Hub Admin</h1><p class="muted">Private control panel</p>
-<div class="field"><label>Email</label><input id="email" type="email"></div>
-<div class="field"><label>Password</label><input id="password" type="password"></div>
-<button class="btn" id="loginBtn">Login</button><p id="msg" class="muted"></p></div></section>
-<section class="app" id="app"><aside class="side"><h2>Pro Tools Hub</h2><a href="#dashboard">Dashboard</a><a href="#products">Products</a><a href="#orders">Orders</a><a href="#deposits">Deposits</a><a href="#flashsale">Flash Sale</a><a href="#dealoftheday">Deal of the Day</a><a href="#" id="logout">Logout</a></aside>
-<main class="main"><div class="top"><div><h1>Dashboard</h1><p class="muted">Products added here appear on the Blogger store.</p></div><button class="btn" id="addBtn">+ Add Product</button></div>
-<div class="stats"><div class="stat">Products<b id="count">0</b></div><div class="stat">Orders<b id="orderCount">0</b></div><div class="stat">Today's Visitors<b id="visitCount">0</b></div><div class="stat">Status<b>LIVE</b></div></div>
-<div class="panel hide" id="form"><h2 id="formTitle">Add Product</h2><div class="formgrid">
+<section class="login" id="login"><div class="blob b1"></div><div class="blob b2"></div><div class="box">
+<div class="logo">P</div>
+<h1>Pro Tools Hub</h1><p class="muted" style="margin:0 0 22px">Admin control panel — sign in to continue</p>
+<div class="field"><label>Email</label><input id="email" type="email" placeholder="you@example.com"></div>
+<div class="field"><label>Password</label><input id="password" type="password" placeholder="••••••••"></div>
+<button class="btn" id="loginBtn" style="width:100%;margin-top:6px">Sign In</button><p id="msg" class="muted"></p></div></section>
+<section class="app" id="app"><aside class="side">
+<div class="brandrow"><div class="logo">P</div><h2>Pro Tools Hub</h2></div>
+<p class="tagline">Admin Panel</p>
+<a href="#dashboard" class="navlink" data-h="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
+<a href="#products" class="navlink" data-h="products"><i class="fa-solid fa-box-open"></i> Products</a>
+<a href="#orders" class="navlink" data-h="orders"><i class="fa-solid fa-receipt"></i> Orders</a>
+<a href="#deposits" class="navlink" data-h="deposits"><i class="fa-solid fa-wallet"></i> Deposits</a>
+<a href="#flashsale" class="navlink" data-h="flashsale"><i class="fa-solid fa-bolt"></i> Flash Sale</a>
+<a href="#dealoftheday" class="navlink" data-h="dealoftheday"><i class="fa-solid fa-star"></i> Deal of the Day</a>
+<div class="spacer"></div>
+<div class="logoutlink"><a href="#" id="logout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Logout</a></div>
+</aside>
+<main class="main"><div class="top"><div><h1>Dashboard</h1><p class="muted">Products added here appear on the Blogger store.</p></div><button class="btn" id="addBtn"><i class="fa-solid fa-plus"></i> Add Product</button></div>
+<div class="stats">
+<div class="stat c1"><i class="fa-solid fa-box-open"></i><span class="lbl">Products</span><b id="count">0</b></div>
+<div class="stat c2"><i class="fa-solid fa-receipt"></i><span class="lbl">Orders</span><b id="orderCount">0</b></div>
+<div class="stat c3"><i class="fa-solid fa-eye"></i><span class="lbl">Today's Visitors</span><b id="visitCount">0</b></div>
+<div class="stat c4"><i class="fa-solid fa-signal"></i><span class="lbl">Status</span><b>LIVE</b></div>
+</div>
+<div class="panel hide" id="form"><h2><i class="fa-solid fa-box-open"></i> <span id="formTitle">Add Product</span></h2><div class="formgrid">
 <div class="field"><label>Name</label><input id="name"></div><div class="field"><label>Category</label><input id="category" placeholder="Graphics, Courses..."></div>
 <div class="field"><label>Price (BDT)</label><input id="price" type="number" step="0.01"></div><div class="field"><label>Old Price</label><input id="oldPrice" type="number" step="0.01"></div>
 <div class="field"><label>Badge</label><select id="badge"><option value="None">None</option><option value="New">New</option><option value="Bestseller">Bestseller</option><option value="Limited Stock">Limited Stock</option></select></div>
@@ -30,20 +112,20 @@
 <div class="field full"><label>Additional Images (gallery — one link per line)</label><textarea id="images" rows="3" placeholder="https://...&#10;https://..." oninput="renderGalleryPreview()"></textarea><div id="imagesPreview" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"></div></div>
 <div class="field full"><label>Download Link (used for instant Wallet purchases)</label><input id="downloadLink" type="url" placeholder="https://drive.google.com/..."></div>
 <div class="field full"><label>Description</label><textarea id="description" rows="4"></textarea></div></div>
-<button class="btn" id="saveBtn">Save Product</button> <button class="btn danger" id="cancelBtn">Cancel</button></div>
-<div class="panel" id="products"><h2>Products</h2><div class="tablewrap"><table class="products"><thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead><tbody id="list"></tbody></table></div></div>
-<div class="panel" id="orders"><h2>Orders</h2><div class="tablewrap"><table class="products"><thead><tr><th>Buyer</th><th>Product</th><th>Method</th><th>Trx ID</th><th>Status</th><th>Deliver</th></tr></thead><tbody id="orderList"></tbody></table></div></div>
-<div class="panel" id="deposits"><h2>Deposits</h2><div class="tablewrap"><table class="products"><thead><tr><th>User</th><th>Requested</th><th>Charge</th><th>Total Expected</th><th>Sent</th><th>Method / Trx</th><th>Status</th><th></th></tr></thead><tbody id="depositList"></tbody></table></div></div>
-<div class="panel" id="flashsale"><h2>Flash Sale Banner</h2>
+<button class="btn" id="saveBtn"><i class="fa-solid fa-check"></i> Save Product</button> <button class="btn danger" id="cancelBtn"><i class="fa-solid fa-xmark"></i> Cancel</button></div>
+<div class="panel" id="products"><h2><i class="fa-solid fa-boxes-stacked"></i> Products</h2><div class="tablewrap"><table class="products"><thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead><tbody id="list"></tbody></table></div></div>
+<div class="panel" id="orders"><h2><i class="fa-solid fa-receipt"></i> Orders</h2><div class="tablewrap"><table class="products"><thead><tr><th>Buyer</th><th>Product</th><th>Method</th><th>Trx ID</th><th>Status</th><th>Deliver</th></tr></thead><tbody id="orderList"></tbody></table></div></div>
+<div class="panel" id="deposits"><h2><i class="fa-solid fa-wallet"></i> Deposits</h2><div class="tablewrap"><table class="products"><thead><tr><th>User</th><th>Requested</th><th>Charge</th><th>Total Expected</th><th>Sent</th><th>Method / Trx</th><th>Status</th><th></th></tr></thead><tbody id="depositList"></tbody></table></div></div>
+<div class="panel" id="flashsale"><h2><i class="fa-solid fa-bolt"></i> Flash Sale Banner</h2>
 <div class="field"><label><input id="flashEnabled" type="checkbox" style="width:auto;display:inline-block;margin-right:8px">Show flash sale banner on store</label></div>
 <div class="field"><label>Banner Text</label><input id="flashText" placeholder="Eid Offer ends soon — up to 30% off!"></div>
 <div class="field"><label>Ends At</label><input id="flashEnd" type="datetime-local"></div>
-<button class="btn" id="saveFlashBtn">Save Flash Sale</button> <span id="flashMsg" class="muted"></span>
+<button class="btn" id="saveFlashBtn"><i class="fa-solid fa-check"></i> Save Flash Sale</button> <span id="flashMsg" class="muted"></span>
 </div>
-<div class="panel" id="dealoftheday"><h2>Deal of the Day</h2>
+<div class="panel" id="dealoftheday"><h2><i class="fa-solid fa-star"></i> Deal of the Day</h2>
 <div class="field"><label>Select Product</label><select id="dealProduct"><option value="">— None (hide section) —</option></select></div>
 <div class="field"><label>Ends At (optional countdown)</label><input id="dealEnd" type="datetime-local"></div>
-<button class="btn" id="saveDealBtn">Save Deal of the Day</button> <span id="dealMsg" class="muted"></span>
+<button class="btn" id="saveDealBtn"><i class="fa-solid fa-check"></i> Save Deal of the Day</button> <span id="dealMsg" class="muted"></span>
 </div>
 </main></section>
 <script type="module">
@@ -54,6 +136,12 @@ import {firebaseConfig} from "./firebase-config.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 let editId=null;
 const $=id=>document.getElementById(id);
+function highlightNav(){
+  const h=(location.hash||'#dashboard').replace('#','');
+  document.querySelectorAll('.navlink').forEach(a=>a.classList.toggle('active',a.dataset.h===h));
+}
+window.addEventListener('hashchange',highlightNav);
+highlightNav();
 $("loginBtn").onclick=async()=>{try{await signInWithEmailAndPassword(auth,$("email").value,$("password").value);$("msg").textContent=""}catch(e){$("msg").textContent="Login failed. Check email/password."}};
 $("logout").onclick=e=>{e.preventDefault();signOut(auth)};
 onAuthStateChanged(auth,u=>{if(u){$("login").style.display="none";$("app").style.display="block";load();loadFlashSale();loadDealOfDay();loadDeposits()}else{$("login").style.display="grid";$("app").style.display="none"}});
