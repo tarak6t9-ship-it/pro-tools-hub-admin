@@ -91,6 +91,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif}
 <a href="#products" class="navlink" data-h="products"><i class="fa-solid fa-box-open"></i> Products</a>
 <a href="#orders" class="navlink" data-h="orders"><i class="fa-solid fa-receipt"></i> Orders</a>
 <a href="#deposits" class="navlink" data-h="deposits"><i class="fa-solid fa-wallet"></i> Deposits</a>
+<a href="#referrals" class="navlink" data-h="referrals"><i class="fa-solid fa-gift"></i> Referrals</a>
 <a href="#flashsale" class="navlink" data-h="flashsale"><i class="fa-solid fa-bolt"></i> Flash Sale</a>
 <a href="#dealoftheday" class="navlink" data-h="dealoftheday"><i class="fa-solid fa-star"></i> Deal of the Day</a>
 <div class="spacer"></div>
@@ -108,8 +109,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif}
 <div class="field"><label>Price (BDT)</label><input id="price" type="number" step="0.01"></div><div class="field"><label>Old Price</label><input id="oldPrice" type="number" step="0.01"></div>
 <div class="field"><label>Badge</label><select id="badge"><option value="None">None</option><option value="New">New</option><option value="Bestseller">Bestseller</option><option value="Limited Stock">Limited Stock</option></select></div>
 <div class="field" style="display:flex;align-items:flex-end"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0"><input id="pinned" type="checkbox" style="width:auto"> <i class="fa-solid fa-thumbtack" style="color:var(--g)"></i> Pin to top of store</label></div>
-<div class="field"><label><input id="pinned" type="checkbox" style="width:auto;display:inline-block;margin-right:8px">📌 Pin to top of store</label></div>
-<div class="field"></div>
+<div class="field" style="display:flex;align-items:flex-end"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0"><input id="outOfStock" type="checkbox" style="width:auto"> <i class="fa-solid fa-ban" style="color:#c23b3b"></i> Mark as Out of Stock</label></div>
 <div class="field full"><label>Main Image (Cover) — paste image link (e.g. from imgbb.com)</label><input id="image" type="url" placeholder="https://..." oninput="renderMainPreview()"><div id="imagePreview" style="margin-top:8px"></div></div>
 <div class="field full"><label>Additional Images (gallery — one link per line)</label><textarea id="images" rows="3" placeholder="https://...&#10;https://..." oninput="renderGalleryPreview()"></textarea><div id="imagesPreview" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"></div></div>
 <div class="field full"><label>Download Link (used for instant Wallet purchases — only if NO pricing plans below)</label><input id="downloadLink" type="url" placeholder="https://drive.google.com/..."></div>
@@ -137,6 +137,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif}
 <div class="panel" id="products"><h2><i class="fa-solid fa-boxes-stacked"></i> Products</h2><div class="tablewrap"><table class="products"><thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead><tbody id="list"></tbody></table></div></div>
 <div class="panel" id="orders"><h2><i class="fa-solid fa-receipt"></i> Orders</h2><div class="tablewrap"><table class="products"><thead><tr><th>Buyer</th><th>Product</th><th>Method</th><th>Trx ID</th><th>Status</th><th>Deliver</th></tr></thead><tbody id="orderList"></tbody></table></div></div>
 <div class="panel" id="deposits"><h2><i class="fa-solid fa-wallet"></i> Deposits</h2><div class="tablewrap"><table class="products"><thead><tr><th>User</th><th>Requested</th><th>Charge</th><th>Total Expected</th><th>Sent</th><th>Method / Trx</th><th>Status</th><th></th></tr></thead><tbody id="depositList"></tbody></table></div></div>
+<div class="panel" id="referrals"><h2><i class="fa-solid fa-gift"></i> Referrals (৳10 bonus each)</h2><div class="tablewrap"><table class="products"><thead><tr><th>New User</th><th>Referrer Code (UID)</th><th>Status</th><th></th></tr></thead><tbody id="referralList"></tbody></table></div></div>
 <div class="panel" id="flashsale"><h2><i class="fa-solid fa-bolt"></i> Flash Sale Banner</h2>
 <div class="field"><label><input id="flashEnabled" type="checkbox" style="width:auto;display:inline-block;margin-right:8px">Show flash sale banner on store</label></div>
 <div class="field"><label>Banner Text</label><input id="flashText" placeholder="Eid Offer ends soon — up to 30% off!"></div>
@@ -152,7 +153,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import {getFirestore,collection,getDocs,addDoc,updateDoc,deleteDoc,doc,getDoc,setDoc,increment,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import {getFirestore,collection,getDocs,addDoc,updateDoc,deleteDoc,doc,getDoc,setDoc,increment,serverTimestamp,onSnapshot} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 let editId=null;
@@ -165,7 +166,7 @@ window.addEventListener('hashchange',highlightNav);
 highlightNav();
 $("loginBtn").onclick=async()=>{try{await signInWithEmailAndPassword(auth,$("email").value,$("password").value);$("msg").textContent=""}catch(e){$("msg").textContent="Login failed. Check email/password."}};
 $("logout").onclick=e=>{e.preventDefault();signOut(auth)};
-onAuthStateChanged(auth,u=>{if(u){$("login").style.display="none";$("app").style.display="block";load();loadFlashSale();loadDealOfDay();loadDeposits()}else{$("login").style.display="grid";$("app").style.display="none"}});
+onAuthStateChanged(auth,u=>{if(u){$("login").style.display="none";$("app").style.display="block";load();loadFlashSale();loadDealOfDay();loadDeposits();loadReferrals()}else{$("login").style.display="grid";$("app").style.display="none"}});
 async function load(){let s=await getDocs(collection(db,"products"));$("count").textContent=s.size;$("list").innerHTML=s.docs.map(d=>{let p=d.data();return `<tr><td><img src="${p.image||''}"></td><td>${escapeHtml(p.name||'')}</td><td>${escapeHtml(p.category||'')}</td><td>৳${Number(p.price||0).toFixed(2)}</td><td class="actions"><button onclick="editProduct('${d.id}')">Edit</button><button class="danger" onclick="removeProduct('${d.id}')">Delete</button></td></tr>`}).join("");loadOrders();loadVisits()}
 async function loadVisits(){try{let today=new Date().toISOString().slice(0,10);let d=await getDoc(doc(db,"visits",today));$("visitCount").textContent=d.exists()?(d.data().count||0):0}catch(e){$("visitCount").textContent="0"}}
 async function loadOrders(){let s=await getDocs(collection(db,"orders"));$("orderCount").textContent=s.size;
@@ -173,12 +174,24 @@ let rows=s.docs.map(d=>d).sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data()
 $("orderList").innerHTML=rows.map(d=>{let o=d.data();let confirmed=o.status==='confirmed';
 return `<tr><td>${escapeHtml(o.buyerEmail||'')}</td><td>${escapeHtml(o.productName||'')}<br><span class="muted">Price: ৳${Number(o.price||0).toFixed(2)} • Paid: ৳${Number(o.amountPaid||o.price||0).toFixed(2)}</span></td><td>${escapeHtml(o.paymentMethod||'')}</td><td>${escapeHtml(o.transactionId||'')}</td><td><span class="badge ${confirmed?'confirmed':'pending'}">${confirmed?'Confirmed':'Pending'}</span>${confirmed&&!o.deliveryLink?'<br><span style="color:#b3261e;font-size:11px;font-weight:800">No link set!</span>':''}</td><td><div class="deliverrow"><input id="link-${d.id}" placeholder="Download link" value="${escapeHtml(o.deliveryLink||'')}"><button onclick="confirmOrder('${d.id}')">${o.deliveryLink?'Update':'Save Link'}</button></div></td></tr>`}).join("")||`<tr><td colspan="6" class="muted">No orders yet.</td></tr>`}
 window.confirmOrder=async id=>{let link=$("link-"+id).value.trim();if(!link)return alert("Please paste a download link/license key before confirming.");await updateDoc(doc(db,"orders",id),{status:"confirmed",deliveryLink:link,confirmedAt:serverTimestamp()});loadOrders()};
-async function loadDeposits(){
-  let s=await getDocs(collection(db,"deposits"));
-  let rows=s.docs.sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0));
-  $("depositList").innerHTML=rows.map(d=>{let o=d.data();let approved=o.status==='approved';
-    return `<tr><td>${escapeHtml(o.email||'')}</td><td>৳${Number(o.requestedAmount||0).toFixed(2)}</td><td>৳${Number(o.chargeAmount||0).toFixed(2)}</td><td>৳${Number(o.totalExpected||0).toFixed(2)}</td><td>৳${Number(o.amountSent||0).toFixed(2)}</td><td>${escapeHtml(o.paymentMethod||'')}<br><span class="muted">${escapeHtml(o.transactionId||'')}</span></td><td><span class="badge ${approved?'confirmed':'pending'}">${approved?'Approved':'Pending'}</span></td><td>${approved?'':`<button onclick="approveDeposit('${d.id}')">Approve</button>`}</td></tr>`;
-  }).join("")||`<tr><td colspan="8" class="muted">No deposit requests yet.</td></tr>`;
+let lastPendingDeposits=-1,lastPendingReferrals=-1,alertPrimed=false;
+function playAlertBeep(){
+  try{const ctx=new (window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=880;g.gain.value=.15;o.start();setTimeout(()=>{o.frequency.value=1080},120);setTimeout(()=>{o.stop();ctx.close()},260);}catch(e){}
+}
+function updateTitleBadge(){
+  const total=(Math.max(0,lastPendingDeposits)||0)+(Math.max(0,lastPendingReferrals)||0);
+  document.title=(total>0?`(${total}) `:'')+'Pro Tools Hub Admin';
+}
+function loadDeposits(){
+  onSnapshot(collection(db,"deposits"),s=>{
+    let rows=s.docs.sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0));
+    let pendingCount=rows.filter(d=>d.data().status!=='approved').length;
+    if(alertPrimed&&lastPendingDeposits!==-1&&pendingCount>lastPendingDeposits)playAlertBeep();
+    lastPendingDeposits=pendingCount;updateTitleBadge();
+    $("depositList").innerHTML=rows.map(d=>{let o=d.data();let approved=o.status==='approved';
+      return `<tr><td>${escapeHtml(o.email||'')}</td><td>৳${Number(o.requestedAmount||0).toFixed(2)}</td><td>৳${Number(o.chargeAmount||0).toFixed(2)}</td><td>৳${Number(o.totalExpected||0).toFixed(2)}</td><td>৳${Number(o.amountSent||0).toFixed(2)}</td><td>${escapeHtml(o.paymentMethod||'')}<br><span class="muted">${escapeHtml(o.transactionId||'')}</span></td><td><span class="badge ${approved?'confirmed':'pending'}">${approved?'Approved':'Pending'}</span></td><td>${approved?'':`<button onclick="approveDeposit('${d.id}')">Approve</button>`}</td></tr>`;
+    }).join("")||`<tr><td colspan="8" class="muted">No deposit requests yet.</td></tr>`;
+  });
 }
 window.approveDeposit=async id=>{
   let s=await getDocs(collection(db,"deposits"));let dep=s.docs.find(x=>x.id===id);if(!dep)return;
@@ -186,22 +199,41 @@ window.approveDeposit=async id=>{
   if(!confirm(`Approve deposit of ৳${o.requestedAmount} for ${o.email}? This will add the amount to their wallet.`))return;
   await setDoc(doc(db,"wallets",o.uid),{balance:increment(Number(o.requestedAmount||0))},{merge:true});
   await updateDoc(doc(db,"deposits",id),{status:"approved",approvedAt:serverTimestamp()});
-  loadDeposits();
+};
+function loadReferrals(){
+  onSnapshot(collection(db,"referrals"),s=>{
+    let rows=s.docs.sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0));
+    let pendingCount=rows.filter(d=>d.data().status!=='approved').length;
+    if(alertPrimed&&lastPendingReferrals!==-1&&pendingCount>lastPendingReferrals)playAlertBeep();
+    lastPendingReferrals=pendingCount;updateTitleBadge();
+    $("referralList").innerHTML=rows.map(d=>{let o=d.data();let approved=o.status==='approved';
+      return `<tr><td>${escapeHtml(o.newUserEmail||'')}</td><td style="font-size:11px">${escapeHtml(o.referrerUid||'')}</td><td><span class="badge ${approved?'confirmed':'pending'}">${approved?'Approved (৳10 each)':'Pending'}</span></td><td>${approved?'':`<button onclick="approveReferral('${d.id}')">Approve ৳10 Each</button>`}</td></tr>`;
+    }).join("")||`<tr><td colspan="4" class="muted">No referrals yet.</td></tr>`;
+  });
+  setTimeout(()=>alertPrimed=true,1500);
+}
+window.approveReferral=async id=>{
+  let s=await getDocs(collection(db,"referrals"));let ref=s.docs.find(x=>x.id===id);if(!ref)return;
+  let o=ref.data();
+  if(!confirm(`Give ৳10 to both the referrer and ${o.newUserEmail}?`))return;
+  await setDoc(doc(db,"wallets",o.referrerUid),{balance:increment(10)},{merge:true});
+  await setDoc(doc(db,"wallets",o.newUserUid),{balance:increment(10)},{merge:true});
+  await updateDoc(doc(db,"referrals",id),{status:"approved",approvedAt:serverTimestamp()});
 };
 window.renderMainPreview=function(){let u=$("image").value.trim();$("imagePreview").innerHTML=u?`<div class="thumb"><img src="${u}"></div>`:""}
 window.renderGalleryPreview=function(){let urls=$("images").value.split("\n").map(x=>x.trim()).filter(Boolean);$("imagesPreview").innerHTML=urls.map(u=>`<div class="thumb"><img src="${u}"></div>`).join("")}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-$("addBtn").onclick=()=>{editId=null;$("formTitle").textContent="Add Product";["name","category","price","oldPrice","image","images","downloadLink","description","plan1Label","plan1Price","plan1Link","plan2Label","plan2Price","plan2Link","plan3Label","plan3Price","plan3Link"].forEach(x=>$(x).value="");$("badge").value="None";$("pinned").checked=false;renderMainPreview();renderGalleryPreview();$("form").classList.remove("hide")};
+$("addBtn").onclick=()=>{editId=null;$("formTitle").textContent="Add Product";["name","category","price","oldPrice","image","images","downloadLink","description","plan1Label","plan1Price","plan1Link","plan2Label","plan2Price","plan2Link","plan3Label","plan3Price","plan3Link"].forEach(x=>$(x).value="");$("badge").value="None";$("pinned").checked=false;$("outOfStock").checked=false;renderMainPreview();renderGalleryPreview();$("form").classList.remove("hide")};
 $("cancelBtn").onclick=()=>$("form").classList.add("hide");
 $("saveBtn").onclick=async()=>{
   let imgLines=$("images").value.split("\n").map(x=>x.trim()).filter(Boolean);
   let plans=[1,2,3].map(n=>({label:$("plan"+n+"Label").value.trim(),price:Number($("plan"+n+"Price").value||0),downloadLink:$("plan"+n+"Link").value.trim()})).filter(pl=>pl.label);
-  let p={name:$("name").value.trim(),category:$("category").value.trim(),price:Number($("price").value||0),oldPrice:Number($("oldPrice").value||0),badge:$("badge").value,pinned:$("pinned").checked,image:$("image").value.trim(),images:imgLines,downloadLink:$("downloadLink").value.trim(),plans:plans,description:$("description").value.trim(),updatedAt:serverTimestamp()};
+  let p={name:$("name").value.trim(),category:$("category").value.trim(),price:Number($("price").value||0),oldPrice:Number($("oldPrice").value||0),badge:$("badge").value,pinned:$("pinned").checked,outOfStock:$("outOfStock").checked,image:$("image").value.trim(),images:imgLines,downloadLink:$("downloadLink").value.trim(),plans:plans,description:$("description").value.trim(),updatedAt:serverTimestamp()};
   if(!p.name)return alert("Product name required");
   if(editId)await updateDoc(doc(db,"products",editId),p);else await addDoc(collection(db,"products"),{...p,createdAt:serverTimestamp()});
   $("form").classList.add("hide");load();
 };
-window.editProduct=async id=>{let s=await getDocs(collection(db,"products"));let d=s.docs.find(x=>x.id===id);if(!d)return;let p=d.data();editId=id;$("formTitle").textContent="Edit Product";["name","category","price","oldPrice","image","downloadLink","description"].forEach(x=>$(x).value=p[x]??"");$("badge").value=p.badge||"None";$("pinned").checked=!!p.pinned;$("images").value=Array.isArray(p.images)?p.images.join("\n"):"";
+window.editProduct=async id=>{let s=await getDocs(collection(db,"products"));let d=s.docs.find(x=>x.id===id);if(!d)return;let p=d.data();editId=id;$("formTitle").textContent="Edit Product";["name","category","price","oldPrice","image","downloadLink","description"].forEach(x=>$(x).value=p[x]??"");$("badge").value=p.badge||"None";$("pinned").checked=!!p.pinned;$("outOfStock").checked=!!p.outOfStock;$("images").value=Array.isArray(p.images)?p.images.join("\n"):"";
   let plans=Array.isArray(p.plans)?p.plans:[];
   [1,2,3].forEach(n=>{let pl=plans[n-1]||{};$("plan"+n+"Label").value=pl.label||"";$("plan"+n+"Price").value=pl.price||"";$("plan"+n+"Link").value=pl.downloadLink||""});
   renderMainPreview();renderGalleryPreview();$("form").classList.remove("hide")};
