@@ -68,7 +68,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif}
 @media(max-width:800px){.side{position:static;width:auto;flex-direction:row;flex-wrap:wrap;padding:16px}.side .tagline{display:none}.side .spacer{display:none}.main{margin-left:0;padding:18px}.stats{grid-template-columns:1fr 1fr}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}}
 
 .badge{display:inline-block;padding:5px 11px;border-radius:99px;font-size:11px;font-weight:800}
-.badge.pending{background:#fdf1e0;color:#a86a10}.badge.confirmed{background:#e5f6ee;color:#187a5a}
+.badge.pending{background:#fdf1e0;color:#a86a10}.badge.confirmed{background:#e5f6ee;color:#187a5a}.badge.rejected{background:#fdeceb;color:#b3261e}
 
 .deliverrow{display:flex;gap:6px}.deliverrow input{width:150px;padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit}
 .deliverrow button{border:0;border-radius:10px;padding:9px 13px;background:linear-gradient(135deg,var(--g),var(--g2));color:#fff;cursor:pointer;font-weight:700;font-family:inherit}
@@ -185,11 +185,13 @@ function updateTitleBadge(){
 function loadDeposits(){
   onSnapshot(collection(db,"deposits"),s=>{
     let rows=s.docs.sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0));
-    let pendingCount=rows.filter(d=>d.data().status!=='approved').length;
+    let pendingCount=rows.filter(d=>d.data().status!=='approved'&&d.data().status!=='rejected').length;
     if(alertPrimed&&lastPendingDeposits!==-1&&pendingCount>lastPendingDeposits)playAlertBeep();
     lastPendingDeposits=pendingCount;updateTitleBadge();
-    $("depositList").innerHTML=rows.map(d=>{let o=d.data();let approved=o.status==='approved';
-      return `<tr><td>${escapeHtml(o.email||'')}</td><td>৳${Number(o.requestedAmount||0).toFixed(2)}</td><td>৳${Number(o.chargeAmount||0).toFixed(2)}</td><td>৳${Number(o.totalExpected||0).toFixed(2)}</td><td>৳${Number(o.amountSent||0).toFixed(2)}</td><td>${escapeHtml(o.paymentMethod||'')}<br><span class="muted">${escapeHtml(o.transactionId||'')}</span></td><td><span class="badge ${approved?'confirmed':'pending'}">${approved?'Approved':'Pending'}</span></td><td>${approved?'':`<button onclick="approveDeposit('${d.id}')">Approve</button>`}</td></tr>`;
+    $("depositList").innerHTML=rows.map(d=>{let o=d.data();let approved=o.status==='approved';let rejected=o.status==='rejected';
+      let statusHtml=approved?'<span class="badge confirmed">Approved</span>':rejected?'<span class="badge" style="background:#fdeceb;color:#b3261e">Rejected</span>':'<span class="badge pending">Pending</span>';
+      let actionHtml=(approved||rejected)?'':`<div class="deliverrow"><button onclick="approveDeposit('${d.id}')">Approve</button><button class="danger" onclick="rejectDeposit('${d.id}')">Reject</button></div>`;
+      return `<tr><td>${escapeHtml(o.email||'')}</td><td>৳${Number(o.requestedAmount||0).toFixed(2)}</td><td>৳${Number(o.chargeAmount||0).toFixed(2)}</td><td>৳${Number(o.totalExpected||0).toFixed(2)}</td><td>৳${Number(o.amountSent||0).toFixed(2)}</td><td>${escapeHtml(o.paymentMethod||'')}<br><span class="muted">${escapeHtml(o.transactionId||'')}</span></td><td>${statusHtml}</td><td>${actionHtml}</td></tr>`;
     }).join("")||`<tr><td colspan="8" class="muted">No deposit requests yet.</td></tr>`;
   });
 }
@@ -200,14 +202,22 @@ window.approveDeposit=async id=>{
   await setDoc(doc(db,"wallets",o.uid),{balance:increment(Number(o.requestedAmount||0))},{merge:true});
   await updateDoc(doc(db,"deposits",id),{status:"approved",approvedAt:serverTimestamp()});
 };
+window.rejectDeposit=async id=>{
+  let s=await getDocs(collection(db,"deposits"));let dep=s.docs.find(x=>x.id===id);if(!dep)return;
+  let o=dep.data();
+  if(!confirm(`Reject this deposit of ৳${o.requestedAmount} from ${o.email}? No amount will be added to their wallet. This usually means the payment/Transaction ID could not be verified.`))return;
+  await updateDoc(doc(db,"deposits",id),{status:"rejected",rejectedAt:serverTimestamp()});
+};
 function loadReferrals(){
   onSnapshot(collection(db,"referrals"),s=>{
     let rows=s.docs.sort((a,b)=>(b.data().createdAt?.seconds||0)-(a.data().createdAt?.seconds||0));
-    let pendingCount=rows.filter(d=>d.data().status!=='approved').length;
+    let pendingCount=rows.filter(d=>d.data().status!=='approved'&&d.data().status!=='rejected').length;
     if(alertPrimed&&lastPendingReferrals!==-1&&pendingCount>lastPendingReferrals)playAlertBeep();
     lastPendingReferrals=pendingCount;updateTitleBadge();
-    $("referralList").innerHTML=rows.map(d=>{let o=d.data();let approved=o.status==='approved';
-      return `<tr><td>${escapeHtml(o.newUserEmail||'')}</td><td style="font-size:11px">${escapeHtml(o.referrerUid||'')}</td><td><span class="badge ${approved?'confirmed':'pending'}">${approved?'Approved (৳10 each)':'Pending'}</span></td><td>${approved?'':`<button onclick="approveReferral('${d.id}')">Approve ৳10 Each</button>`}</td></tr>`;
+    $("referralList").innerHTML=rows.map(d=>{let o=d.data();let approved=o.status==='approved';let rejected=o.status==='rejected';
+      let statusHtml=approved?'<span class="badge confirmed">Approved (৳10 each)</span>':rejected?'<span class="badge rejected">Rejected</span>':'<span class="badge pending">Pending</span>';
+      let actionHtml=(approved||rejected)?'':`<div class="deliverrow"><button onclick="approveReferral('${d.id}')">Approve ৳10 Each</button><button class="danger" onclick="rejectReferral('${d.id}')">Reject</button></div>`;
+      return `<tr><td>${escapeHtml(o.newUserEmail||'')}</td><td style="font-size:11px">${escapeHtml(o.referrerUid||'')}</td><td>${statusHtml}</td><td>${actionHtml}</td></tr>`;
     }).join("")||`<tr><td colspan="4" class="muted">No referrals yet.</td></tr>`;
   });
   setTimeout(()=>alertPrimed=true,1500);
@@ -219,6 +229,12 @@ window.approveReferral=async id=>{
   await setDoc(doc(db,"wallets",o.referrerUid),{balance:increment(10)},{merge:true});
   await setDoc(doc(db,"wallets",o.newUserUid),{balance:increment(10)},{merge:true});
   await updateDoc(doc(db,"referrals",id),{status:"approved",approvedAt:serverTimestamp()});
+};
+window.rejectReferral=async id=>{
+  let s=await getDocs(collection(db,"referrals"));let ref=s.docs.find(x=>x.id===id);if(!ref)return;
+  let o=ref.data();
+  if(!confirm(`Reject this referral for ${o.newUserEmail}? No bonus will be given to either user.`))return;
+  await updateDoc(doc(db,"referrals",id),{status:"rejected",rejectedAt:serverTimestamp()});
 };
 window.renderMainPreview=function(){let u=$("image").value.trim();$("imagePreview").innerHTML=u?`<div class="thumb"><img src="${u}"></div>`:""}
 window.renderGalleryPreview=function(){let urls=$("images").value.split("\n").map(x=>x.trim()).filter(Boolean);$("imagesPreview").innerHTML=urls.map(u=>`<div class="thumb"><img src="${u}"></div>`).join("")}
